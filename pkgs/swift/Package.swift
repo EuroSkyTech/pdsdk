@@ -17,12 +17,16 @@ let package = Package(
     ],
     dependencies: [ ],
     targets: [
-        .binaryTarget(name: "PdSdkFramework", path: "./PdSdkFramework.xcframework"),
+        .binaryTarget(name: "PdSdkFramework", path: "PdSdkFramework.xcframework"),
         .target(
             name: "PdSdk",
             dependencies: [
                 .target(name: "PdSdkFramework")
             ]
         ),
-    ]
+        .testTarget(
+            name: "PdSdkTests",
+            dependencies: ["PdSdk"]
+        )
+    ]   
 )

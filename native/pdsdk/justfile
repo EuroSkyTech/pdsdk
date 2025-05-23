@@ -2,9 +2,9 @@ name := "pdsdk"
 name-lib := "libpdsdk"
 
 build-ios:
+    just build-ios-target aarch64-apple-darwin
     just build-ios-target aarch64-apple-ios
     just build-ios-target aarch64-apple-ios-sim 
-    just build-ios-target x86_64-apple-ios
     just build-ios-bindings
 
 build-ios-target target:
