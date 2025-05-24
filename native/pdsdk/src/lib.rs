@@ -1,35 +1,55 @@
-use async_std::future;
 use std::time::Duration;
+
+use async_std::{future, task};
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+uniffi::setup_scaffolding!();
+
+#[derive(uniffi::Error, Error, Debug)]
 pub enum Error {
+    // NOTE: just error w/o foreing types at this point
     #[error("no new hellos available")]
     Unavailable,
 
-    #[error("timeout waiting for hello")]
-    Timeout(#[from] future::TimeoutError),
+    #[error("timeout waiting for hello: {0}")]
+    Timeout(String),
 }
 
+impl From<future::TimeoutError> for Error {
+    fn from(error: future::TimeoutError) -> Self {
+        Error::Timeout(error.to_string())
+    }
+}
+
+#[derive(uniffi::Object)]
 pub struct World {
     attribute: String,
 }
 
+#[uniffi::export]
 impl World {
+    #[uniffi::constructor]
     pub fn new(attribute: String) -> Self {
         Self { attribute }
     }
+
+    /// Exports the attribute of this world instance.
+    pub fn get_attribute(&self) -> String {
+        self.attribute.clone()
+    }
 }
 
-pub trait Hello<T> {
-    type Error;
-    fn hello(&self) -> impl Future<Output = Result<T, Self::Error>>;
+#[uniffi::export]
+#[async_trait::async_trait]
+pub trait Hello: Send + Sync {
+    async fn hello(&self) -> Result<String, Error>;
 }
 
-impl Hello<String> for World {
-    type Error = Error;
-    async fn hello(&self) -> Result<String, Self::Error> {
-        future::timeout(Duration::from_secs(1), future::pending()).await?;
+#[uniffi::export]
+#[async_trait::async_trait]
+impl Hello for World {
+    async fn hello(&self) -> Result<String, Error> {
+        task::sleep(Duration::from_secs(1)).await;
         Ok(format!("Hello, {} world!", self.attribute))
     }
 }
@@ -38,5 +58,3 @@ impl Hello<String> for World {
 pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
-
-uniffi::setup_scaffolding!();

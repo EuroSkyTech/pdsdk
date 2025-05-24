@@ -1,1 +1,0 @@
-../../../../native/pdsdk/target/bindings/ios/pdsdk.swift

@@ -1,4 +1,4 @@
 .build/
 .swiftpm/
-PdSdkFramework.xcframework/**/libpdsdk.a
-PdSdkFramework.xcframework/**/headers/PdSdkFramework/*
+PdSdkFramework.xcframework/aarch64*
+Sources/PdSdk/pdsdk.swift
