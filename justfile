@@ -5,13 +5,20 @@ pkg-lib-static := "libpdsdk.a"
 apps-ios-open:
     open apps/ios/example.xcodeproj
 
-clean: native-clean pkg-swift-clean
+clean: native-clean pkg-aar-clean pkg-swift-clean
+
+build: pkg-aar-build pkg-swift-build
 
 native-build:
     just native-build-target aarch64-apple-darwin
     just native-build-target aarch64-apple-ios
     just native-build-target aarch64-apple-ios-sim
+    just native-build-target-android
     just native-build-bindings
+
+[working-directory: "pkgs/aar"]
+pkg-aar-build: native-build && (pkg-aar-test)
+    just pkg-aar-link
 
 [working-directory: "pkgs/swift"]
 pkg-swift-build: native-build && (pkg-swift-test)
@@ -20,10 +27,9 @@ pkg-swift-build: native-build && (pkg-swift-test)
     just pkg-swift-link-target aarch64-apple-ios-sim
     plutil -p PdSdkFramework.xcframework/Info.plist
 
-[private, working-directory: "pkgs/swift"]
-pkg-swift-test:
-    swift build
-    swift test
+[working-directory: "pkgs/swift"]
+pkg-swift-open:
+    open Package.swift
 
 [private, working-directory: "native"]
 native-clean:
@@ -33,13 +39,17 @@ native-clean:
 native-build-bindings: native-build-binding-swift native-build-binding-kotlin
     # NOTE: target architecture does not matter for the bindings
 
-[private, working-directory: "native"]
-native-build-binding-swift: # NOTE: target architecture does not matter for the bindings
-    cargo run --features bindgen --bin bindgen generate --library target/aarch64-apple-darwin/release/{{pkg-lib-static}} --language swift --out-dir target/bindings/ios
+[private, working-directory("native")]
+native-build-binding-swift:
+    cargo run --features bindgen --bin bindgen generate --library target/aarch64-apple-darwin/release/{{ pkg-lib-static }} --language swift --out-dir target/bindings/ios
 
-[private, working-directory: "native"]
+[private, working-directory("native")]
 native-build-binding-kotlin:
-    cargo run --features bindgen --bin bindgen generate --library target/aarch64-apple-darwin/release/{{pkg-lib-dynamic}} --language kotlin --out-dir target/bindings/android
+    cargo run --features bindgen --bin bindgen generate --library target/aarch64-apple-darwin/release/{{ pkg-lib-dynamic }} --language kotlin --out-dir target/bindings/android/kotlin
+
+[private,working-directory: "native"]
+native-build-target-android:
+    cargo ndk -t armeabi-v7a -t arm64-v8a -t x86 -t x86_64 -o target/bindings/android/jniLibs build --release --package pdsdk
 
 [private,working-directory: "native/pdsdk"]
 native-build-target target: && (native-build-target-size target)
@@ -49,6 +59,21 @@ native-build-target target: && (native-build-target-size target)
 native-build-target-size target:
     @date >> target/{{target}}/release/sizes.txt
     @ls -lh target/{{target}}/release/lib* | awk '{print $9, $5}' | column -t -s " " | tee -a target/{{target}}/release/sizes.txt
+
+[private, working-directory: "pkgs/aar"]
+pkg-aar-clean:
+    rm -rf src/main
+
+[private, working-directory: "pkgs/aar"]
+pkg-aar-link:
+    mkdir -p src/main && \
+        cd src/main && \
+        cp -frl ../../../../native/target/bindings/android/* .
+
+[private, working-directory: "pkgs/aar"]
+pkg-aar-test:
+    gradle build
+    # FIXME: no "hello world" test yet - cargo ndk does not support darwin-aarch64 and native dylibs do not use the appropriate JNI symbols (prefixed with Java_namespace_methodname)
 
 [private, working-directory: "pkgs/swift"]
 pkg-swift-clean:
@@ -69,6 +94,7 @@ pkg-swift-link-target target:
         ln -fw ../../../../../../native/target/bindings/ios/{{pkg-name}}FFI.modulemap module.modulemap && \
         ln -fw ../../../../../../native/target/bindings/ios/{{pkg-name}}FFI.h
 
-[working-directory: "pkgs/swift"]
-pkg-swift-open:
-    open Package.swift
+[private, working-directory: "pkgs/swift"]
+pkg-swift-test:
+    swift build
+    swift test
