@@ -19,7 +19,6 @@ native-build:
 [working-directory: "pkgs/aar"]
 pkg-aar-build: native-build && (pkg-aar-test) (pkg-aar-build-clean)
     just pkg-aar-link
-    gradle wrapper
     ./gradlew publishToMavenLocal
 
 [working-directory: "pkgs/swift"]
