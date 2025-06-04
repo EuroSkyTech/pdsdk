@@ -1,6 +1,7 @@
 plugins {
     id("com.android.library") version "8.1.4"
     id("org.jetbrains.kotlin.android") version "1.9.10"
+    id("maven-publish")
 }
 
 android {
@@ -24,4 +25,16 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+}
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "com.bignextthing"
+            artifactId = "pdsdk"
+            version = "1.0.0"
+
+            afterEvaluate { from(components["release"]) }
+        }
+    }
 }

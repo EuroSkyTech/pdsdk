@@ -17,15 +17,16 @@ native-build:
     just native-build-bindings
 
 [working-directory: "pkgs/aar"]
-pkg-aar-build: native-build && (pkg-aar-test)
+pkg-aar-build: native-build && (pkg-aar-test) (pkg-aar-build-clean)
     just pkg-aar-link
+    gradle wrapper
+    ./gradlew publishToMavenLocal
 
 [working-directory: "pkgs/swift"]
-pkg-swift-build: native-build && (pkg-swift-test)
+pkg-swift-build: native-build && (pkg-swift-test) (pkg-swift-build-clean)
     just pkg-swift-link-target aarch64-apple-darwin
     just pkg-swift-link-target aarch64-apple-ios
     just pkg-swift-link-target aarch64-apple-ios-sim
-    plutil -p PdSdkFramework.xcframework/Info.plist
 
 [working-directory: "pkgs/swift"]
 pkg-swift-open:
@@ -49,7 +50,7 @@ native-build-binding-kotlin:
 
 [private,working-directory: "native"]
 native-build-target-android:
-    cargo ndk -t armeabi-v7a -t arm64-v8a -t x86 -t x86_64 -o target/bindings/android/jniLibs build --release --package pdsdk
+    cargo ndk -t armeabi-v7a -t arm64-v8a -t x86 -t x86_64 -p 35 -o target/bindings/android/jniLibs build --release --package pdsdk
 
 [private,working-directory: "native/pdsdk"]
 native-build-target target: && (native-build-target-size target)
@@ -60,20 +61,27 @@ native-build-target-size target:
     @date >> target/{{target}}/release/sizes.txt
     @ls -lh target/{{target}}/release/lib* | awk '{print $9, $5}' | column -t -s " " | tee -a target/{{target}}/release/sizes.txt
 
+[private, working-directory: "apps/android"]
+pkg-aar-build-clean:
+    ./gradlew clean --refresh-dependencies --rerun-tasks
+
 [private, working-directory: "pkgs/aar"]
 pkg-aar-clean:
     rm -rf src/main
 
 [private, working-directory: "pkgs/aar"]
 pkg-aar-link:
-    mkdir -p src/main && \
-        cd src/main && \
-        cp -frl ../../../../native/target/bindings/android/* .
+    mkdir -p src/main
+    cp -rf ../../native/target/bindings/android/* src/main/
 
 [private, working-directory: "pkgs/aar"]
 pkg-aar-test:
     gradle build
     # FIXME: no "hello world" test yet - cargo ndk does not support darwin-aarch64 and native dylibs do not use the appropriate JNI symbols (prefixed with Java_namespace_methodname)
+
+[private, working-directory: "apps/ios"]
+pkg-swift-build-clean:
+    xcodebuild clean -project example.xcodeproj -alltargets
 
 [private, working-directory: "pkgs/swift"]
 pkg-swift-clean:
