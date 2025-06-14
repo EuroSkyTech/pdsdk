@@ -1,0 +1,19 @@
+name: Examples
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v3
+      - name: Install full development dependencies
+        run: just install-dependencies
+      - name: Build and test native bindings
+        run: just build

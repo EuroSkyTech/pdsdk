@@ -1,13 +1,28 @@
+android-build-tools := "35.0.1"
+android-home := "/opt/homebrew/share/android-commandlinetools"
+android-platform := "35"
+android-ndk := "28.1.13356709"
+
+ios-xcode := "16.2"
+
 pkg-name := "pdsdk"
 pkg-lib-dynamic := "libpdsdk.dylib"
 pkg-lib-static := "libpdsdk.a"
 
+export ANDROID_HOME := android-home
+export ANDROID_SDK_ROOT := android-home
+export ANDROID_NDK_HOME := android-home + "/ndk/" + android-ndk
+export JAVA_HOME := "/opt/homebrew/opt/openjdk@17"
+
+apps-android:
+    open apps/android -a "Android Studio"
+
 apps-ios-open:
     open apps/ios/example.xcodeproj
 
-clean: native-clean pkg-aar-clean pkg-swift-clean
-
 build: pkg-aar-build pkg-swift-build
+
+clean: native-clean pkg-aar-clean pkg-swift-clean
 
 native-build:
     just native-build-target aarch64-apple-darwin
@@ -15,6 +30,26 @@ native-build:
     just native-build-target aarch64-apple-ios-sim
     just native-build-target-android
     just native-build-bindings
+
+install-dependencies:
+    #!/bin/sh
+    set -eo pipefail
+
+    brew install --cask temurin
+    brew install android-commandlinetools gawk openjdk@17
+
+    cargo install cargo-ndk
+
+    yes | sdkmanager --licenses || true
+    sdkmanager --install "build-tools;{{ android-build-tools }}" --verbose
+    sdkmanager --install "platforms;android-{{ android-platform }}" --verbose
+    sdkmanager --install "platform-tools" --verbose
+    sdkmanager --install "ndk;{{ android-ndk }}" --verbose
+    sdkmanager --install "system-images;android-{{ android-platform }};google_apis;arm64-v8a" --verbose
+
+    if [ "$GITHUB_ACTIONS" = "true" ]; then
+        sudo xcode-select -switch /Applications/Xcode_{{ ios-xcode }}.app/Contents/Developer
+    fi
 
 [working-directory("pkgs/aar")]
 pkg-aar-build: native-build && pkg-aar-test pkg-aar-build-clean
@@ -54,7 +89,7 @@ native-build-binding-kotlin:
 [private]
 [working-directory("native")]
 native-build-target-android:
-    cargo ndk -t armeabi-v7a -t arm64-v8a -t x86 -t x86_64 -p 35 -o target/bindings/android/jniLibs build --release --package pdsdk
+    cargo ndk -t armeabi-v7a -t arm64-v8a -t x86 -t x86_64 -p {{ android-platform }} -o target/bindings/android/jniLibs build --release --package pdsdk
 
 [private]
 [working-directory("native/pdsdk")]
