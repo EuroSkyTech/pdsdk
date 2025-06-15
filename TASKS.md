@@ -4,10 +4,6 @@
 
 # Tasks
 
-## Low hanging fruits
-
-- re-enable just LS, run just fmt
-
 ## Targets
 
 - add wasm
@@ -21,7 +17,3 @@
 
 - unify namespaces for packages (aar: com.bignextthing.pdsdk)
 - unify namespaces for apps (ios: example? swift: com.bignextthing.eurosky3000, android: com.bignextthing.eurosky3000)
-
-## Testing / Reproducing
-
-- Build a VM to test the first-time setup (including all Android & iOS dependencies)

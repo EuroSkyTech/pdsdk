@@ -8,6 +8,11 @@ name = "bindgen"
 path = "src/bindgen.rs"
 required-features = ["bindgen"]
 
+[[bin]]
+name = "report"
+path = "src/report.rs"
+required-features = ["report"]
+
 [lib]
 # TODO: scope libraries per target (https://github.com/rust-lang/cargo/issues/12260)
 crate-type = ["lib", "cdylib", "staticlib"]
@@ -18,9 +23,16 @@ async-trait = "0.1"
 thiserror = "2.0"
 uniffi = { version = "0.29" }
 
+# build metadata
+eyre = { version = "0.6", optional = true }
+itertools = { version = "0.14", optional = true }
+owo-colors = { version = "4", optional = true }
+substance = { version = "0.6", optional = true }
+
 [build-dependencies]
 uniffi = { version = "0.29", features = ["build"] }
 
 [features]
 bindgen = ["uniffi/cli"]
+report = ["dep:eyre", "dep:itertools", "dep:owo-colors", "dep:substance"]
 extended = []
