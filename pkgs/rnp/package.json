@@ -160,5 +160,8 @@
     "languages": "kotlin-objc",
     "type": "turbo-module",
     "version": "0.51.0"
+  },
+  "dependencies": {
+    "uniffi-bindgen-react-native": "^0.29.3-0"
   }
 }
