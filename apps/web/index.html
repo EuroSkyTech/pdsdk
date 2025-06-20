@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>PdSdk Web Example</title>
+    </head>
+    <body>
+        <div>
+            <h1>🌐 Hello, world!</h1>
+            <p id="sdk-version">Loading SDK version...</p>
+
+            <div id="result-container">
+                <p id="hello-result" style="color: green; display: none"></p>
+                <p id="error-message" style="color: red; display: none"></p>
+            </div>
+
+            <button id="call-hello" disabled>Call Hello</button>
+        </div>
+
+        <script type="module">
+            import init, { version, World } from "./js/pdsdk.js";
+
+            let world = null;
+
+            async function initializeApp() {
+                try {
+                    // Initialize WASM
+                    await init();
+
+                    // Display SDK version
+                    const sdkVersion = version();
+                    document.getElementById("sdk-version").textContent =
+                        `Using SDK ${sdkVersion}`;
+
+                    // Initialize World instance
+                    world = new World("HTML");
+
+                    // Enable the button
+                    document.getElementById("call-hello").disabled = false;
+
+                    console.log("App initialized successfully");
+                } catch (error) {
+                    console.error("Failed to initialize app:", error);
+                    document.getElementById("error-message").textContent =
+                        `Initialization failed: ${error.message}`;
+                    document.getElementById("error-message").style.display =
+                        "block";
+                }
+            }
+
+            async function callHello() {
+                if (!world) return;
+
+                // Hide previous results
+                document.getElementById("hello-result").style.display = "none";
+                document.getElementById("error-message").style.display = "none";
+
+                try {
+                    const result = await world.hello();
+                    document.getElementById("hello-result").textContent =
+                        result;
+                    document.getElementById("hello-result").style.display =
+                        "block";
+                } catch (error) {
+                    document.getElementById("error-message").textContent =
+                        error.message;
+                    document.getElementById("error-message").style.display =
+                        "block";
+                }
+            }
+
+            // Initialize app when page loads
+            initializeApp();
+
+            // Setup button click handler
+            document
+                .getElementById("call-hello")
+                .addEventListener("click", callHello);
+        </script>
+    </body>
+</html>

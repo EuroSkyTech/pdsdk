@@ -1,12 +1,15 @@
 # Next
 
-- WASM support
+- CID: struct, how to address the different serializations? from_str, to_str?
+- clarify required indexes (according to ATProto XRPC features) and build persistence (sdk user supplies path)
+- consider https://crates.io/crates/tsify for TS generation
+- get rid of ipld-core
+- disable strip profile in profile for target or fix memory optimization ins wasm-opt (see https://github.com/leptos-rs/cargo-leptos/issues/441)
 
 # Tasks
 
 ## Targets
 
-- add wasm
 - add react native
 - test dynamic libraries for various targets
 - limits libs per target

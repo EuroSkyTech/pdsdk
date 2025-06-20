@@ -22,13 +22,42 @@ apps-android:
 apps-ios-open:
     open apps/ios/example.xcodeproj
 
-build: pkg-aar-build pkg-swift-build
+[working-directory("apps/web")]
+apps-wasm-run:
+    caddy run
+
+[working-directory("apps/web")]
+apps-wasm-open:
+    open https://localhost:3000
+
+build: pkg-aar-build pkg-npm-build pkg-swift-build && build-report
 
 [working-directory("native")]
 build-report:
+    #!/bin/sh
     mkdir -p {{ report-dir }}
-    cargo bloat > {{ report-dir }}/bloat.txt
-    cargo tree > {{ report-dir }}/tree.txt
+    targets=$(just build-targets)
+
+    export RUSTFLAGS="-A warnings"
+
+    echo "Native bloat\n\n"
+    cargo bloat --release --package {{ pkg-name }} | tee {{ report-dir }}/bloat-darwin.txt
+
+    for target in $targets; do
+        echo "\nTrees for $target\n"
+        cargo tree --edges normal --package {{ pkg-name }} --target $target | tee {{ report-dir }}/trees-$target.txt
+
+        echo "\nSizes for $target\n"
+        ls -lh target/$target/release/lib* | awk '{print $9, $5}' | column -t -s " " | tee {{ report-dir }}/sizes-$target.txt
+    done
+
+    echo "\nWASM sizes\n"
+    ls -lh target/bindings/wasm/*.wasm* | awk '{print $9, $5}' | column -t -s " " | tee {{ report-dir }}/sizes-wasm.txt
+
+[private]
+[working-directory("native")]
+build-targets:
+    gawk '/targets/,/]/ { if (match($0, /"([^"]+-.+-.+[^"]*)"/, arr)) print arr[1] }' rust-toolchain.toml
 
 clean: native-clean pkg-aar-clean pkg-swift-clean
 
@@ -37,16 +66,15 @@ native-build:
     just native-build-target aarch64-apple-ios
     just native-build-target aarch64-apple-ios-sim
     just native-build-target-android
-    just native-build-bindings
+    just native-build-binding-swift
+    just native-build-binding-kotlin
 
-install-dependencies:
+install-dependencies: install-rust-dependencies
     #!/bin/sh
     set -eo pipefail
 
     brew install --cask temurin
     brew install android-commandlinetools gawk openjdk@17
-
-    cargo install cargo-ndk
 
     yes | sdkmanager --licenses || true
     sdkmanager --install "build-tools;{{ android-build-tools }}" --verbose
@@ -59,10 +87,19 @@ install-dependencies:
         sudo xcode-select -switch /Applications/Xcode_{{ ios-xcode }}.app/Contents/Developer
     fi
 
+install-rust-dependencies:
+    brew install cargo-binstall
+    cargo binstall cargo-ndk@3.5.4 --no-confirm
+    cargo binstall wasm-pack@0.13.1 --no-confirm
+
 [working-directory("pkgs/aar")]
 pkg-aar-build: native-build && pkg-aar-test pkg-aar-build-clean
     just pkg-aar-link
     ./gradlew publishToMavenLocal
+
+[working-directory("pkgs/npm")]
+pkg-npm-build: native-build-target-wasm
+    just pkg-npm-link
 
 [working-directory("pkgs/swift")]
 pkg-swift-build: native-build && pkg-swift-test pkg-swift-build-clean
@@ -81,11 +118,6 @@ native-clean:
 
 [private]
 [working-directory("native")]
-native-build-bindings: native-build-binding-swift native-build-binding-kotlin
-    # NOTE: target architecture does not matter for the bindings
-
-[private]
-[working-directory("native")]
 native-build-binding-swift:
     cargo run --features bindgen --bin bindgen generate --library target/aarch64-apple-darwin/release/{{ pkg-lib-static }} --language swift --out-dir target/bindings/ios
 
@@ -100,15 +132,14 @@ native-build-target-android:
     cargo ndk -t armeabi-v7a -t arm64-v8a -t x86 -t x86_64 -p {{ android-platform }} -o target/bindings/android/jniLibs build --release --package pdsdk
 
 [private]
-[working-directory("native/pdsdk")]
-native-build-target target: && (native-build-target-size target)
-    cargo build --package pdsdk  --target {{ target }} --release
+[working-directory("native")]
+native-build-target-wasm:
+    CARGO_PROFILE_RELEASE_STRIP=false wasm-pack build --target web --release --out-dir ../target/bindings/wasm pdsdk
 
 [private]
-[working-directory("native")]
-native-build-target-size target:
-    @date >> target/{{ target }}/release/sizes.txt
-    @ls -lh target/{{ target }}/release/lib* | awk '{print $9, $5}' | column -t -s " " | tee -a target/{{ target }}/release/sizes.txt
+[working-directory("native/pdsdk")]
+native-build-target target:
+    cargo build --package pdsdk  --target {{ target }} --release
 
 [private]
 [working-directory("apps/android")]
@@ -131,6 +162,11 @@ pkg-aar-link:
 pkg-aar-test:
     gradle build
     # FIXME: no "hello world" test yet - cargo ndk does not support darwin-aarch64 and native dylibs do not use the appropriate JNI symbols (prefixed with Java_namespace_methodname)
+
+[private]
+[working-directory("pkgs/npm")]
+pkg-npm-link:
+    cp -rf ../../native/target/bindings/wasm/* .
 
 [private]
 [working-directory("apps/ios")]
