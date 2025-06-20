@@ -74,7 +74,9 @@ install-dependencies: install-rust-dependencies
     set -eo pipefail
 
     brew install --cask temurin
-    brew install android-commandlinetools gawk openjdk@17
+    brew install android-commandlinetools gawk llvm openjdk@17
+
+    brew link llvm --force
 
     yes | sdkmanager --licenses || true
     sdkmanager --install "build-tools;{{ android-build-tools }}" --verbose

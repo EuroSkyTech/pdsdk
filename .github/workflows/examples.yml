@@ -13,9 +13,65 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: extractions/setup-just@v3
+
+      - name: Cache Homebrew, Android SDK and cargo binstall
+        uses: actions/cache@v4
+        with:
+          path: |
+            /opt/homebrew
+            ~/.cargo/bin
+          key: ${{ runner.os }}-homebrew-${{ hashFiles('justfile') }}
+          restore-keys: |
+            ${{ runner.os }}-homebrew-
+
+      - name: Cache Rust toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains
+            ~/.rustup/update-hashes
+            ~/.rustup/settings.toml
+          key: ${{ runner.os }}-rustup-${{ hashFiles('native/rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-rustup-
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            native/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('native/Cargo.lock', 'native/rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            pkgs/aar/.gradle
+            apps/android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('pkgs/aar/gradle/wrapper/gradle-wrapper.properties', 'apps/android/gradle/wrapper/gradle-wrapper.properties', 'pkgs/aar/build.gradle*', 'apps/android/build.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - name: Install full development dependencies
         run: just install-dependencies
+        env:
+          BINSTALL_NO_DISCOVER_GITHUB_TOKEN: "true"
+
       - name: Build and test native bindings
         run: just build
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+      - name: Debug on failure
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          detached: true
+        timeout-minutes: 15
