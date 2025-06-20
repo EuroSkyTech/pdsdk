@@ -30,7 +30,11 @@ apps-wasm-run:
 apps-wasm-open:
     open https://localhost:3000
 
-build: pkg-aar-build pkg-npm-build pkg-swift-build && build-report
+build: && build-report
+    #!/usr/bin/env -S parallel --shebang --keep-order --jobs {{ num_cpus() }}
+    just pkg-aar-build
+    just pkg-npm-build
+    just pkg-swift-build
 
 [working-directory("native")]
 build-report:
@@ -62,6 +66,7 @@ build-targets:
 clean: native-clean pkg-aar-clean pkg-swift-clean
 
 native-build:
+    #!/usr/bin/env -S parallel --shebang --keep-order --jobs {{ num_cpus() }}
     just native-build-target aarch64-apple-darwin
     just native-build-target aarch64-apple-ios
     just native-build-target aarch64-apple-ios-sim
