@@ -9,6 +9,8 @@ pkg-name := "pdsdk"
 pkg-lib-dynamic := "libpdsdk.dylib"
 pkg-lib-static := "libpdsdk.a"
 
+report-dir := "target/report/" + datetime("%Y%m%d-%H%M%S")
+
 export ANDROID_HOME := android-home
 export ANDROID_SDK_ROOT := android-home
 export ANDROID_NDK_HOME := android-home + "/ndk/" + android-ndk
@@ -21,6 +23,12 @@ apps-ios-open:
     open apps/ios/example.xcodeproj
 
 build: pkg-aar-build pkg-swift-build
+
+[working-directory("native")]
+build-report:
+    mkdir -p {{ report-dir }}
+    cargo bloat > {{ report-dir }}/bloat.txt
+    cargo tree > {{ report-dir }}/tree.txt
 
 clean: native-clean pkg-aar-clean pkg-swift-clean
 
