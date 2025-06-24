@@ -1,5 +1,12 @@
-localhost:3000 {
-    tls internal
+localhost:{$CADDY_PORT} {
+
+    header * {
+        Cache-Control "no-cache, no-store"
+        -ETag
+        -Last-Modified
+    }
+
     file_server
-    root * .
+
+    tls internal
 }

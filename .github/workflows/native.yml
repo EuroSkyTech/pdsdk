@@ -1,0 +1,46 @@
+name: Native tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: extractions/setup-just@v3
+
+      - name: Cache rust toolchains
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains
+            ~/.rustup/update-hashes
+            ~/.rustup/settings.toml
+          key: ${{ runner.os }}-${{ matrix.platform }}-rustup-${{ hashFiles('native/rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.platform }}-rustup-
+
+      - name: Cache rust / cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            native/target
+          key: ${{ runner.os }}-${{ matrix.platform }}-cargo-${{ hashFiles('native/Cargo.lock', 'native/rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.platform }}-cargo-
+
+      - name: Run tests
+        run: just test
