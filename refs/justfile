@@ -1,0 +1,28 @@
+atproto-pds-host-port := "8433"
+atproto-pds-image-name := "pds"
+atproto-pds-tag := "@atproto/pds@0.4.153"
+atproto-pds-tag-version := replace_regex(atproto-pds-tag, "^@.+@", "")
+
+[working-directory("atproto")]
+atproto-checkout:
+    git checkout {{ atproto-pds-tag }}
+
+generate-keypair:
+    openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32
+
+[doc("Builds a PDF image locally to allow easy source code patching")]
+pds-build:
+    docker build atproto/ --file atproto/services/pds/Dockerfile --tag {{ atproto-pds-image-name }}:{{ atproto-pds-tag-version }}
+
+pds-run: pds-run-convert-env-to-docker
+    docker run --env-file pds/.env.docker -it -p {{ atproto-pds-host-port }}:443 --rm -v $PWD/pds/data:/app/data {{ atproto-pds-image-name }}:{{ atproto-pds-tag-version }}
+
+pds-test:
+    @echo Expected version: {{ atproto-pds-tag-version }}
+    @echo Got version: `curl -s http://pds.localhost:{{ atproto-pds-host-port }}/xrpc/_health | jq -r .version`
+
+[private]
+[working-directory("pds")]
+pds-run-convert-env-to-docker:
+    # see https://github.com/docker/cli/issues/3630
+    cat .env | egrep "^PDS_.*=.+" | sed -e 's/"//g' > .env.docker
